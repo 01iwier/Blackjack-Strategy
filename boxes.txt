@@ -1,0 +1,7 @@
+self.rectangles = [
+            {"top": 115, "left": 800, "width": 95, "height": 45}, #Dealer Up Card
+            {"top": 377, "left": 805, "width": 95, "height": 45}, #Total 2
+            {"top": 370, "left": 845, "width": 95, "height": 45}, #Total 3
+            {"top": 365, "left": 885, "width": 95, "height": 45}, #Total 4
+            {"top": 345, "left": 874, "width": 95, "height": 45}  #Total 5
+        ]
