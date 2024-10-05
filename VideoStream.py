@@ -1,6 +1,7 @@
 from threading import Thread
 import numpy as np
 import mss
+import pytesseract
 
 class VideoStream:
 
