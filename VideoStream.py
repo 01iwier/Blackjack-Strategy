@@ -5,11 +5,8 @@ import cv2
 import pytesseract
 import re
 
-# If needed, specify the path to your Tesseract installation
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Blackjack strategy table (simplified for demonstration)
-# Keys are (player_total, dealer_up_card) -> Optimal Move
 blackjack_strategy = {
     # Player total 2
     (2, '2'): 'H', (2, '3'): 'H', (2, '4'): 'H', (2, '5'): 'H', (2, '6'): 'H',
@@ -84,7 +81,6 @@ blackjack_strategy = {
     (19, '7'): 'S', (19, '8'): 'S', (19, '9'): 'S', (19, '10'): 'S', (19, 'A'): 'S'
 }
 
-
 class VideoStream:
 
     def __init__(self, resolution=(1400, 765), monitor_area=None, framerate=30):
@@ -97,7 +93,6 @@ class VideoStream:
         self.frame = None
         self.stopped = False
         
-        # Rectangle definitions for dealer and player totals
         self.rectangles = [
             {"name": "Dealer Up Card", "top": 115, "left": 800, "width": 95, "height": 45},  # Dealer Up Card
             {"name": "Total 2 Cards", "top": 377, "left": 805, "width": 95, "height": 45},  # Total 2 cards
@@ -117,39 +112,30 @@ class VideoStream:
                     return
                 screenshot = sct.grab(self.monitor)
                 frame = np.array(screenshot)
-                self.frame = frame[:, :, :3]  # Get the BGR channels
+                self.frame = frame[:, :, :3]
 
     def draw_rectangles(self, frame):
-        """Draw rectangles on the given frame."""
         if frame is not None:
             for rect in self.rectangles:
                 cv2.rectangle(frame, 
                               (rect["left"], rect["top"]),
                               (rect["left"] + rect["width"], rect["top"] + rect["height"]),
-                              (0, 255, 0), 1)  # Green rectangles
+                              (0, 255, 0), 1)
         return frame
 
     def extract_text_from_rect(self, frame, rect):
-        """Extract text from a specific rectangle region using OCR."""
-        # Crop the region from the frame
         cropped_region = frame[rect["top"]:rect["top"] + rect["height"],
                                rect["left"]:rect["left"] + rect["width"]]
-        
-        # Convert the cropped region to grayscale for better OCR accuracy
         gray = cv2.cvtColor(cropped_region, cv2.COLOR_BGR2GRAY)
-        
-        # Perform OCR using pytesseract
-        extracted_text = pytesseract.image_to_string(gray, config='--psm 7')  # psm 7 assumes a single line of text
+        extracted_text = pytesseract.image_to_string(gray, config='--psm 7')
         
         return extracted_text.strip()
 
     def is_valid_total(self, text):
-        """Validate if the extracted text is a valid total (digits or soft total like '12/22')."""
-        # Match text that consists of digits or 'xx/xx' pattern
         match = re.fullmatch(r'\d+|\d+/\d+', text)
         if match:
             if '/' in text:
-                soft_total = int(text.split('/')[0])  # Soft total is the first number before the slash
+                soft_total = int(text.split('/')[0])
                 return soft_total <= 21
             else:
                 total = int(text)
@@ -169,26 +155,21 @@ class VideoStream:
         
         for total in valid_totals:
             if '/' in total:
-                return total.split('/')[0]  # Return the soft part of the total
-        return valid_totals[0]  # Return the first valid numeric total if no soft total found
+                return total.split('/')[0]
+        return valid_totals[0]
 
     def get_optimal_strategy(self, player_total, dealer_card):
-        """Return the optimal strategy from the strategy table."""
-        # Check the strategy table for the player's total and dealer's up card
         if (player_total, dealer_card) in blackjack_strategy:
             return blackjack_strategy[(player_total, dealer_card)]
-        return "No Strategy"  # Default if no strategy found
+        return "No Strategy"
 
     def read(self):
-        """Return the most recent frame with rectangles drawn, and extract player total."""
         if self.frame is not None:
             frame_with_rectangles = self.draw_rectangles(self.frame.copy())
             
-            # Extract player total and dealer's up card
             player_total = self.select_player_total()
             dealer_up_card = self.extract_text_from_rect(self.frame, self.rectangles[0])
 
-            # Display player total and dealer up card
             if player_total:
                 cv2.putText(frame_with_rectangles, f"Player Total: {player_total}", (50, 100), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
@@ -196,7 +177,6 @@ class VideoStream:
                 cv2.putText(frame_with_rectangles, f"Dealer Up Card: {dealer_up_card}", (50, 50), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
-            # Determine optimal strategy
             if player_total and dealer_up_card.isdigit():  # Ensure valid dealer up card
                 optimal_move = self.get_optimal_strategy(int(player_total), dealer_up_card)
                 cv2.putText(frame_with_rectangles, f"Strategy: {optimal_move}", (50, 150), 
@@ -206,7 +186,6 @@ class VideoStream:
         return None
 
     def stop(self):
-        """Indicate that the screen capturing should be stopped."""
         self.stopped = True
 
 if __name__ == "__main__":
