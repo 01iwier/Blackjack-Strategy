@@ -1,4 +1,4 @@
-from threading import Thread
+import threading
 import numpy as np
 import mss
 import cv2
@@ -7,6 +7,83 @@ import re
 
 # If needed, specify the path to your Tesseract installation
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+# Blackjack strategy table (simplified for demonstration)
+# Keys are (player_total, dealer_up_card) -> Optimal Move
+blackjack_strategy = {
+    # Player total 2
+    (2, '2'): 'H', (2, '3'): 'H', (2, '4'): 'H', (2, '5'): 'H', (2, '6'): 'H',
+    (2, '7'): 'H', (2, '8'): 'H', (2, '9'): 'H', (2, '10'): 'H', (2, 'A'): 'H',
+    
+    # Player total 3
+    (3, '2'): 'H', (3, '3'): 'H', (3, '4'): 'H', (3, '5'): 'H', (3, '6'): 'H',
+    (3, '7'): 'H', (3, '8'): 'H', (3, '9'): 'H', (3, '10'): 'H', (3, 'A'): 'H',
+
+    # Player total 4
+    (4, '2'): 'H', (4, '3'): 'H', (4, '4'): 'H', (4, '5'): 'H', (4, '6'): 'H',
+    (4, '7'): 'H', (4, '8'): 'H', (4, '9'): 'H', (4, '10'): 'H', (4, 'A'): 'H',
+
+    # Player total 5
+    (5, '2'): 'H', (5, '3'): 'H', (5, '4'): 'H', (5, '5'): 'H', (5, '6'): 'H',
+    (5, '7'): 'H', (5, '8'): 'H', (5, '9'): 'H', (5, '10'): 'H', (5, 'A'): 'H',
+
+    # Player total 6
+    (6, '2'): 'H', (6, '3'): 'H', (6, '4'): 'H', (6, '5'): 'H', (6, '6'): 'H',
+    (6, '7'): 'H', (6, '8'): 'H', (6, '9'): 'H', (6, '10'): 'H', (6, 'A'): 'H',
+
+    # Player total 7
+    (7, '2'): 'H', (7, '3'): 'H', (7, '4'): 'H', (7, '5'): 'H', (7, '6'): 'H',
+    (7, '7'): 'H', (7, '8'): 'H', (7, '9'): 'H', (7, '10'): 'H', (7, 'A'): 'H',
+
+    # Player total 8
+    (8, '2'): 'H', (8, '3'): 'H', (8, '4'): 'H', (8, '5'): 'H', (8, '6'): 'H',
+    (8, '7'): 'H', (8, '8'): 'H', (8, '9'): 'H', (8, '10'): 'H', (8, 'A'): 'H',
+
+    # Player total 9
+    (9, '2'): 'H', (9, '3'): 'D', (9, '4'): 'D', (9, '5'): 'D', (9, '6'): 'D',
+    (9, '7'): 'H', (9, '8'): 'H', (9, '9'): 'H', (9, '10'): 'H', (9, 'A'): 'H',
+
+    # Player total 10
+    (10, '2'): 'D', (10, '3'): 'D', (10, '4'): 'D', (10, '5'): 'D', (10, '6'): 'D',
+    (10, '7'): 'D', (10, '8'): 'D', (10, '9'): 'D', (10, '10'): 'H', (10, 'A'): 'H',
+
+    # Player total 11
+    (11, '2'): 'D', (11, '3'): 'D', (11, '4'): 'D', (11, '5'): 'D', (11, '6'): 'D',
+    (11, '7'): 'D', (11, '8'): 'D', (11, '9'): 'D', (11, '10'): 'D', (11, 'A'): 'D',
+
+    # Player total 12
+    (12, '2'): 'H', (12, '3'): 'H', (12, '4'): 'S', (12, '5'): 'S', (12, '6'): 'S',
+    (12, '7'): 'H', (12, '8'): 'H', (12, '9'): 'H', (12, '10'): 'H', (12, 'A'): 'H',
+
+    # Player total 13
+    (13, '2'): 'S', (13, '3'): 'S', (13, '4'): 'S', (13, '5'): 'S', (13, '6'): 'S',
+    (13, '7'): 'H', (13, '8'): 'H', (13, '9'): 'H', (13, '10'): 'H', (13, 'A'): 'H',
+
+    # Player total 14
+    (14, '2'): 'S', (14, '3'): 'S', (14, '4'): 'S', (14, '5'): 'S', (14, '6'): 'S',
+    (14, '7'): 'H', (14, '8'): 'H', (14, '9'): 'H', (14, '10'): 'H', (14, 'A'): 'H',
+
+    # Player total 15
+    (15, '2'): 'S', (15, '3'): 'S', (15, '4'): 'S', (15, '5'): 'S', (15, '6'): 'S',
+    (15, '7'): 'H', (15, '8'): 'H', (15, '9'): 'H', (15, '10'): 'H', (15, 'A'): 'H',
+
+    # Player total 16
+    (16, '2'): 'S', (16, '3'): 'S', (16, '4'): 'S', (16, '5'): 'S', (16, '6'): 'S',
+    (16, '7'): 'H', (16, '8'): 'H', (16, '9'): 'H', (16, '10'): 'H', (16, 'A'): 'H',
+
+    # Player total 17
+    (17, '2'): 'S', (17, '3'): 'S', (17, '4'): 'S', (17, '5'): 'S', (17, '6'): 'S',
+    (17, '7'): 'S', (17, '8'): 'S', (17, '9'): 'S', (17, '10'): 'S', (17, 'A'): 'S',
+
+    # Player total 18
+    (18, '2'): 'S', (18, '3'): 'S', (18, '4'): 'S', (18, '5'): 'S', (18, '6'): 'S',
+    (18, '7'): 'S', (18, '8'): 'S', (18, '9'): 'S', (18, '10'): 'S', (18, 'A'): 'S',
+
+    # Player total 19
+    (19, '2'): 'S', (19, '3'): 'S', (19, '4'): 'S', (19, '5'): 'S', (19, '6'): 'S',
+    (19, '7'): 'S', (19, '8'): 'S', (19, '9'): 'S', (19, '10'): 'S', (19, 'A'): 'S'
+}
+
 
 class VideoStream:
 
@@ -30,7 +107,7 @@ class VideoStream:
         ]
 
     def start(self):
-        Thread(target=self.update, args=()).start()
+        threading.Thread(target=self.update, args=()).start()
         return self
 
     def update(self):
@@ -71,7 +148,6 @@ class VideoStream:
         # Match text that consists of digits or 'xx/xx' pattern
         match = re.fullmatch(r'\d+|\d+/\d+', text)
         if match:
-            # If it's a valid number or number/number (soft total)
             if '/' in text:
                 soft_total = int(text.split('/')[0])  # Soft total is the first number before the slash
                 return soft_total <= 21
@@ -83,8 +159,6 @@ class VideoStream:
     def select_player_total(self):
         """Select the most valid player total based on the extracted text from rectangles."""
         valid_totals = []
-
-        # Extract text from all rectangles and validate
         for rect in self.rectangles[1:]:
             text = self.extract_text_from_rect(self.frame, rect)
             if self.is_valid_total(text):
@@ -93,23 +167,41 @@ class VideoStream:
         if not valid_totals:
             return None
         
-        # Prefer slashed totals (soft totals), otherwise use numeric ones
         for total in valid_totals:
             if '/' in total:
                 return total.split('/')[0]  # Return the soft part of the total
         return valid_totals[0]  # Return the first valid numeric total if no soft total found
 
+    def get_optimal_strategy(self, player_total, dealer_card):
+        """Return the optimal strategy from the strategy table."""
+        # Check the strategy table for the player's total and dealer's up card
+        if (player_total, dealer_card) in blackjack_strategy:
+            return blackjack_strategy[(player_total, dealer_card)]
+        return "No Strategy"  # Default if no strategy found
+
     def read(self):
         """Return the most recent frame with rectangles drawn, and extract player total."""
         if self.frame is not None:
             frame_with_rectangles = self.draw_rectangles(self.frame.copy())
+            
+            # Extract player total and dealer's up card
             player_total = self.select_player_total()
+            dealer_up_card = self.extract_text_from_rect(self.frame, self.rectangles[0])
+
+            # Display player total and dealer up card
             if player_total:
                 cv2.putText(frame_with_rectangles, f"Player Total: {player_total}", (50, 100), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-            dealer_up_card = self.extract_text_from_rect(self.frame, self.rectangles[0])
-            cv2.putText(frame_with_rectangles, f"Dealer Up Card: {dealer_up_card}", (50, 50), 
-            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            if dealer_up_card:
+                cv2.putText(frame_with_rectangles, f"Dealer Up Card: {dealer_up_card}", (50, 50), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+
+            # Determine optimal strategy
+            if player_total and dealer_up_card.isdigit():  # Ensure valid dealer up card
+                optimal_move = self.get_optimal_strategy(int(player_total), dealer_up_card)
+                cv2.putText(frame_with_rectangles, f"Strategy: {optimal_move}", (50, 150), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2, cv2.LINE_AA)
+
             return frame_with_rectangles
         return None
 
